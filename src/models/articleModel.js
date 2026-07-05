@@ -52,7 +52,7 @@ const ArticleModel = {
       SELECT a.id, a.titre, a.contenu, a.categorie, a.cover_image_path,
              a.date_publication, u.nom AS auteur_nom, u.prenom AS auteur_prenom
       FROM articles a JOIN users u ON u.id = a.auteur_id
-      WHERE a.statut = 'publié'
+      WHERE a.statut = 'publie'
     `;
     if (search) {
       params.push(`%${search}%`);
@@ -69,7 +69,7 @@ const ArticleModel = {
 
   async countPublished({ search } = {}) {
     const params = [];
-    let query = `SELECT COUNT(*)::int AS count FROM articles WHERE statut = 'publié'`;
+    let query = `SELECT COUNT(*)::int AS count FROM articles WHERE statut = 'publie'`;
     if (search) {
       params.push(`%${search}%`);
       query += ` AND (titre ILIKE $${params.length} OR contenu ILIKE $${params.length})`;
@@ -91,7 +91,7 @@ const ArticleModel = {
   },
 
   async updateStatut(id, { statut, validatedBy }) {
-    const datePublication = statut === 'publié' ? 'NOW()' : 'NULL';
+    const datePublication = statut === 'publie' ? 'NOW()' : 'NULL';
     const result = await pool.query(
       `UPDATE articles
        SET statut = $1, validated_by = $2, date_publication = ${datePublication}
@@ -113,7 +113,7 @@ const ArticleModel = {
 
   async countPublishedTotal() {
     const result = await pool.query(
-      `SELECT COUNT(*)::int AS count FROM articles WHERE statut = 'publié'`
+      `SELECT COUNT(*)::int AS count FROM articles WHERE statut = 'publie'`
     );
     return result.rows[0].count;
   },

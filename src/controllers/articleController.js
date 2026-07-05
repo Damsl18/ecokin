@@ -1,10 +1,10 @@
 const ArticleModel = require('../models/articleModel');
+const { sanitizeHtml } = require('../utils/sanitizeHtml');
+const { normalizeArticleStatut, articleStatusMessage } = require('../utils/status');
 
 function buildCoverPath(file) {
   return file ? `/uploads/articles/${file.filename}` : null;
 }
-
-const STATUTS_VALIDES = ['en_attente', 'publié', 'rejeté'];
 
 const ArticleController = {
   // POST /api/articles  (auth requis, image de couverture optionnelle)
@@ -15,10 +15,15 @@ const ArticleController = {
         return res.status(400).json({ error: 'Champs requis : titre, contenu.' });
       }
 
+      const contenuSanitize = sanitizeHtml(contenu);
+      if (!contenuSanitize) {
+        return res.status(400).json({ error: 'Le contenu de l\'article est vide ou invalide après nettoyage HTML.' });
+      }
+
       const article = await ArticleModel.create({
         auteurId: req.user.id,
-        titre,
-        contenu,
+        titre: titre.trim(),
+        contenu: contenuSanitize,
         categorie,
         coverImagePath: buildCoverPath(req.file),
       });
@@ -50,7 +55,7 @@ const ArticleController = {
 
       const isOwner = req.user && article.auteur_id === req.user.id;
       const isAdmin = req.user && req.user.role === 'admin';
-      if (article.statut !== 'publié' && !isOwner && !isAdmin) {
+      if (article.statut !== 'publie' && !isOwner && !isAdmin) {
         return res.status(403).json({ error: 'Cet article n\'est pas encore publié.' });
       }
 
@@ -77,9 +82,14 @@ const ArticleController = {
         return res.status(400).json({ error: 'Champs requis : titre, contenu.' });
       }
 
+      const contenuSanitize = sanitizeHtml(contenu);
+      if (!contenuSanitize) {
+        return res.status(400).json({ error: 'Le contenu de l\'article est vide ou invalide après nettoyage HTML.' });
+      }
+
       const article = await ArticleModel.update(req.params.id, {
-        titre,
-        contenu,
+        titre: titre.trim(),
+        contenu: contenuSanitize,
         categorie,
         coverImagePath: buildCoverPath(req.file),
       });
@@ -113,8 +123,8 @@ const ArticleController = {
   async listPublic(req, res, next) {
     try {
       const { search } = req.query;
-      const page = parseInt(req.query.page || '1', 10);
-      const limit = parseInt(req.query.limit || '9', 10);
+      const page = Math.max(parseInt(req.query.page || '1', 10), 1);
+      const limit = Math.min(Math.max(parseInt(req.query.limit || '9', 10), 1), 50);
 
       const [articles, total] = await Promise.all([
         ArticleModel.findPublished({ search, page, limit }),
@@ -135,7 +145,11 @@ const ArticleController = {
   // GET /api/articles?statut=
   async listAll(req, res, next) {
     try {
-      const { statut } = req.query;
+      const statut = req.query.statut ? normalizeArticleStatut(req.query.statut) : undefined;
+      if (req.query.statut && !statut) {
+        return res.status(400).json({ error: `Statut invalide. Valeurs possibles : ${articleStatusMessage()}.` });
+      }
+
       const articles = await ArticleModel.findAll({ statut });
       res.json({ articles });
     } catch (err) {
@@ -146,10 +160,11 @@ const ArticleController = {
   // PATCH /api/articles/:id/statut
   async updateStatut(req, res, next) {
     try {
-      const { statut } = req.body;
-      if (!STATUTS_VALIDES.includes(statut)) {
-        return res.status(400).json({ error: `Statut invalide. Valeurs possibles : ${STATUTS_VALIDES.join(', ')}.` });
+      const statut = normalizeArticleStatut(req.body.statut);
+      if (!statut) {
+        return res.status(400).json({ error: `Statut invalide. Valeurs possibles : ${articleStatusMessage()}.` });
       }
+
       const article = await ArticleModel.updateStatut(req.params.id, {
         statut,
         validatedBy: req.user.id,

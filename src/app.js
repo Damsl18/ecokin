@@ -9,18 +9,50 @@ const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
 
+function parseOrigins() {
+  const values = [
+    process.env.FRONTEND_URL,
+    process.env.FRONTEND_PUBLIC_URL,
+    process.env.FRONTEND_USER_URL,
+    process.env.FRONTEND_ADMIN_URL,
+    process.env.FRONTEND_URLS,
+  ];
+
+  return values
+    .filter(Boolean)
+    .flatMap((value) => value.split(','))
+    .map((origin) => origin.trim().replace(/\/$/, ''))
+    .filter(Boolean);
+}
+
+const allowedOrigins = parseOrigins();
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL,
-  credentials: true, // indispensable : autorise l'envoi/réception du cookie de session
+  origin(origin, callback) {
+    // Requêtes serveur à serveur, Postman, curl, ou même-origin.
+    if (!origin) return callback(null, true);
+
+    const cleanOrigin = origin.replace(/\/$/, '');
+    if (allowedOrigins.includes('*') || allowedOrigins.includes(cleanOrigin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`Origine CORS non autorisée : ${origin}`));
+  },
+  credentials: true,
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cookieParser());
 
 // Fichiers uploadés servis statiquement (photos signalements, couvertures articles)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+app.get('/api/health', (req, res) => res.json({
+  status: 'ok',
+  allowed_origins: allowedOrigins,
+}));
 
 app.use('/api', routes);
 

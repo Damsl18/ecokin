@@ -56,7 +56,7 @@ const SignalementModel = {
     return result.rows;
   },
 
-  // Utilisé pour la carte publique : uniquement les signalements validés
+  // Utilisé pour la carte publique : signalements visibles après validation ou prise en charge
   async findValidatedForMap({ commune } = {}) {
     const params = [];
     let query = `
@@ -64,7 +64,7 @@ const SignalementModel = {
              s.photo_path, s.date_creation, u.commune AS user_commune
       FROM signalements s
       JOIN users u ON u.id = s.user_id
-      WHERE s.statut = 'validé'
+      WHERE s.statut IN ('valide', 'en_cours', 'traite')
     `;
     if (commune) {
       params.push(commune);
@@ -78,7 +78,8 @@ const SignalementModel = {
   async updateStatut(id, { statut, motifRejet, validatedBy }) {
     const result = await pool.query(
       `UPDATE signalements
-       SET statut = $1, motif_rejet = $2, validated_by = $3, date_validation = NOW()
+       SET statut = $1, motif_rejet = $2, validated_by = $3,
+           date_validation = CASE WHEN $1 = 'en_attente' THEN NULL ELSE NOW() END
        WHERE id = $4
        RETURNING *`,
       [statut, motifRejet || null, validatedBy, id]
@@ -105,7 +106,7 @@ const SignalementModel = {
 
   async countTraites() {
     const result = await pool.query(
-      `SELECT COUNT(*)::int AS count FROM signalements WHERE statut IN ('validé', 'rejeté')`
+      `SELECT COUNT(*)::int AS count FROM signalements WHERE statut = 'traite'`
     );
     return result.rows[0].count;
   },

@@ -166,6 +166,7 @@ Légende : 🔓 public · 🔑 utilisateur connecté (`user` ou `admin`) · 🛡
 | PUT | `/me` | 🔑 | `nom, prenom, email, commune` |
 | PUT | `/me/password` | 🔑 | `currentPassword, newPassword` |
 | GET | `/` | 🛡️ | — (liste tous les utilisateurs) |
+| GET | `/:id` | 🛡️ | — (détail d'un utilisateur) |
 | PATCH | `/:id/block` | 🛡️ | `blocked: true\|false` |
 | DELETE | `/:id` | 🛡️ | — |
 
@@ -173,12 +174,12 @@ Légende : 🔓 public · 🔑 utilisateur connecté (`user` ou `admin`) · 🛡
 
 | Méthode | Route | Accès | Body / Query |
 |---|---|---|---|
-| GET | `/public` | 🔓 | Query `?commune=` — signalements **validés** pour la carte |
+| GET | `/public` | 🔓 | Query `?commune=` — signalements visibles pour la carte (`valide`, `en_cours`, `traite`) |
 | POST | `/` | 🔑 | multipart/form-data : `description, adresse, latitude, longitude, titre?(auto si absent), photo?(fichier)` |
-| GET | `/me` | 🔑 | Query `?statut=en_attente\|validé\|rejeté` |
+| GET | `/me` | 🔑 | Query `?statut=en_attente\|valide\|en_cours\|traite\|rejete` |
 | GET | `/:id` | 🔑 (propriétaire ou admin) | — |
 | GET | `/` | 🛡️ | Query `?statut=&commune=` — tous les signalements |
-| PATCH | `/:id/statut` | 🛡️ | `statut, motif_rejet` (requis si `rejeté`) |
+| PATCH | `/:id/statut` | 🛡️ | `statut, motif_rejet` (requis si `rejete`). Alias acceptés : `validé`, `traité`, `rejeté`. |
 | DELETE | `/:id` | 🛡️ | — |
 
 ### Articles (`/api/articles`)
@@ -192,7 +193,7 @@ Légende : 🔓 public · 🔑 utilisateur connecté (`user` ou `admin`) · 🛡
 | PUT | `/:id` | 🔑 (auteur, si `en_attente`) | `titre, contenu, categorie?, cover_image?` |
 | DELETE | `/:id` | 🔑 (auteur si `en_attente`) ou 🛡️ | — |
 | GET | `/` | 🛡️ | Query `?statut=` |
-| PATCH | `/:id/statut` | 🛡️ | `statut: publié\|rejeté\|en_attente` |
+| PATCH | `/:id/statut` | 🛡️ | `statut: publie\|rejete\|en_attente`. Alias acceptés : `publié`, `rejeté`. |
 
 ### Points de collecte (`/api/points-collection`)
 
@@ -204,11 +205,24 @@ Légende : 🔓 public · 🔑 utilisateur connecté (`user` ou `admin`) · 🛡
 | PUT | `/:id` | 🛡️ | idem |
 | DELETE | `/:id` | 🛡️ | — |
 
+
+### Zones à risque (`/api/zones-risque`)
+
+| Méthode | Route | Accès | Body / Query |
+|---|---|---|---|
+| GET | `/` | 🔓 | Query `?commune=&niveau_risque=` |
+| GET | `/:id` | 🔓 | — |
+| POST | `/` | 🛡️ | `nom, latitude, longitude, description?, commune?, niveau_risque?, rayon_m?` |
+| PUT | `/:id` | 🛡️ | idem |
+| DELETE | `/:id` | 🛡️ | — |
+
+Niveaux acceptés : `faible`, `moyen`, `eleve`, `critique`.
+
 ### Carte (`/api/map`)
 
 | Méthode | Route | Accès | Description |
 |---|---|---|---|
-| GET | `/data` | 🔓 | Query `?commune=&type_dechet=` — retourne `{ signalements: [...], points_collection: [...] }`, coordonnées déjà en `float`, prêtes pour Leaflet |
+| GET | `/data` | 🔓 | Query `?commune=&type_dechet=&niveau_risque=` — retourne `{ signalements: [...], points_collection: [...], zones_risque: [...] }`, coordonnées déjà en `float`, prêtes pour Leaflet |
 
 ### Tableaux de bord & stats
 

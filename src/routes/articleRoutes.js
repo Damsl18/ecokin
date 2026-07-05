@@ -1,16 +1,34 @@
 const express = require('express');
 const router = express.Router();
 const ArticleController = require('../controllers/articleController');
-const { requireAuth, requireAdmin } = require('../middlewares/auth');
+const { requireAuth, requireAdmin, COOKIE_NAME } = require('../middlewares/auth');
 const { uploadArticleCover } = require('../middlewares/upload');
+const SessionModel = require('../models/sessionModel');
 
-// Middleware d'auth optionnelle : on tente de récupérer req.user si un
-// cookie de session valide est présent, sans bloquer si absent
-// (utile pour /:id qui doit rester accessible au public si publié).
-const { requireAuth: strictAuth } = require('../middlewares/auth');
+// Middleware d'auth optionnelle : on tente de récupérer req.user si un cookie
+// de session valide est présent, sans bloquer si absent/expiré.
+// Utile pour /:id qui doit rester accessible au public si l'article est publié.
 async function optionalAuth(req, res, next) {
-  if (!req.cookies[require('../middlewares/auth').COOKIE_NAME]) return next();
-  return strictAuth(req, res, next);
+  try {
+    const token = req.cookies[COOKIE_NAME];
+    if (!token) return next();
+
+    const session = await SessionModel.findByToken(token);
+    if (!session || session.is_blocked) return next();
+
+    req.user = {
+      id: session.user_id,
+      nom: session.nom,
+      prenom: session.prenom,
+      email: session.email,
+      commune: session.commune,
+      role: session.role,
+    };
+    req.sessionToken = token;
+    return next();
+  } catch (err) {
+    return next();
+  }
 }
 
 // Public — défini AVANT /:id

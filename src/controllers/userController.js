@@ -63,6 +63,19 @@ const UserController = {
     }
   },
 
+
+
+  // GET /api/users/:id
+  async getOneAdmin(req, res, next) {
+    try {
+      const user = await UserModel.findById(req.params.id);
+      if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
+      res.json({ user });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   // PATCH /api/users/:id/block
   async toggleBlock(req, res, next) {
     try {

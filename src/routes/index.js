@@ -8,6 +8,7 @@ router.use('/users', require('./userRoutes'));
 router.use('/signalements', require('./signalementRoutes'));
 router.use('/articles', require('./articleRoutes'));
 router.use('/points-collection', require('./pointCollectionRoutes'));
+router.use('/zones-risque', require('./zoneRisqueRoutes'));
 router.use('/dashboard', require('./dashboardRoutes'));
 router.use('/map', require('./mapRoutes'));
 

@@ -1,16 +1,12 @@
 -- ============================================================
--- EcoKin - Schéma PostgreSQL
--- Corrigé suite aux décisions du 04/07/2026 :
---   - Table `acteurs` supprimée (jugée inutile par l'équipe)
---   - Table `sessions` conservée et utilisée réellement (sessions
---     serveur avec token en cookie, PAS de JWT)
---   - Ajouts sur `users` : reset_token / reset_token_expires
---     (mot de passe oublié) et is_blocked (gestion admin des comptes)
---   - `signalements.titre` rendu NULLABLE : le formulaire "Signaler
---     un déchet" ne collecte pas de titre explicite (voir F2). Le
---     backend génère un titre court à partir de la description si
---     absent. À confirmer avec l'équipe front si un champ titre doit
---     être ajouté au formulaire.
+-- EcoKin - Schéma PostgreSQL corrigé
+-- Version corrigée : 05/07/2026
+-- Décisions importantes :
+--   - Valeurs techniques sans accents pour éviter les erreurs CHECK :
+--     articles.statut : en_attente | publie | rejete
+--     signalements.statut : en_attente | valide | en_cours | traite | rejete
+--   - Zones à risque ajoutées pour la carte admin/public.
+--   - Les sessions restent serveur avec token opaque en cookie httpOnly.
 -- ============================================================
 
 -- ============ TABLE USERS ============
@@ -39,7 +35,7 @@ CREATE TABLE signalements (
   latitude DECIMAL(10, 8) NOT NULL,
   longitude DECIMAL(11, 8) NOT NULL,
   photo_path VARCHAR(500),
-  statut VARCHAR(50) DEFAULT 'en_attente' CHECK (statut IN ('en_attente', 'validé', 'rejeté')),
+  statut VARCHAR(50) DEFAULT 'en_attente' CHECK (statut IN ('en_attente', 'valide', 'en_cours', 'traite', 'rejete')),
   motif_rejet TEXT,
   date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   date_validation TIMESTAMP,
@@ -54,7 +50,7 @@ CREATE TABLE articles (
   categorie VARCHAR(100),
   cover_image_path VARCHAR(500),
   auteur_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  statut VARCHAR(50) DEFAULT 'en_attente' CHECK (statut IN ('en_attente', 'publié', 'rejeté')),
+  statut VARCHAR(50) DEFAULT 'en_attente' CHECK (statut IN ('en_attente', 'publie', 'rejete')),
   date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   date_publication TIMESTAMP,
   validated_by INT REFERENCES users(id) ON DELETE SET NULL
@@ -73,9 +69,23 @@ CREATE TABLE points_collection (
   date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- ============ TABLE ZONES_RISQUE ============
+-- Représentation simple compatible Leaflet : une zone circulaire avec centre + rayon.
+-- Si l'équipe veut des polygones plus tard, ajouter une colonne GeoJSON/PostGIS.
+CREATE TABLE zones_risque (
+  id SERIAL PRIMARY KEY,
+  nom VARCHAR(255) NOT NULL,
+  description TEXT,
+  commune VARCHAR(100),
+  niveau_risque VARCHAR(50) DEFAULT 'moyen' CHECK (niveau_risque IN ('faible', 'moyen', 'eleve', 'critique')),
+  latitude DECIMAL(10, 8) NOT NULL,
+  longitude DECIMAL(11, 8) NOT NULL,
+  rayon_m INT DEFAULT 100 CHECK (rayon_m > 0),
+  date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  date_modification TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- ============ TABLE SESSIONS ============
--- Utilisée activement : un token opaque est généré à la connexion,
--- stocké ici, et posé en cookie httpOnly côté client.
 CREATE TABLE sessions (
   id SERIAL PRIMARY KEY,
   user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -90,5 +100,8 @@ CREATE INDEX idx_signalements_user_id ON signalements(user_id);
 CREATE INDEX idx_signalements_statut ON signalements(statut);
 CREATE INDEX idx_articles_auteur_id ON articles(auteur_id);
 CREATE INDEX idx_articles_statut ON articles(statut);
+CREATE INDEX idx_points_collection_type ON points_collection(type_dechet);
+CREATE INDEX idx_zones_risque_commune ON zones_risque(commune);
+CREATE INDEX idx_zones_risque_niveau ON zones_risque(niveau_risque);
 CREATE INDEX idx_sessions_token ON sessions(token);
 CREATE INDEX idx_sessions_user_id ON sessions(user_id);

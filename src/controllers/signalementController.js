@@ -1,4 +1,5 @@
 const SignalementModel = require('../models/signalementModel');
+const { normalizeSignalementStatut, signalementStatusMessage } = require('../utils/status');
 
 function buildPhotoPath(file) {
   return file ? `/uploads/signalements/${file.filename}` : null;
@@ -6,10 +7,8 @@ function buildPhotoPath(file) {
 
 function deriveTitre(description) {
   const clean = description.trim().replace(/\s+/g, ' ');
-  return clean.length > 60 ? clean.slice(0, 57) + '...' : clean;
+  return clean.length > 60 ? `${clean.slice(0, 57)}...` : clean;
 }
-
-const STATUTS_VALIDES = ['en_attente', 'validé', 'rejeté'];
 
 const SignalementController = {
   // POST /api/signalements  (auth requis, photo optionnelle via multipart/form-data)
@@ -28,12 +27,15 @@ const SignalementController = {
       if (Number.isNaN(lat) || Number.isNaN(lng)) {
         return res.status(400).json({ error: 'Latitude/longitude invalides.' });
       }
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        return res.status(400).json({ error: 'Latitude ou longitude hors limites.' });
+      }
 
       const signalement = await SignalementModel.create({
         userId: req.user.id,
         titre: titre && titre.trim() ? titre.trim() : deriveTitre(description),
-        description,
-        adresse,
+        description: description.trim(),
+        adresse: adresse.trim(),
         latitude: lat,
         longitude: lng,
         photoPath: buildPhotoPath(req.file),
@@ -48,7 +50,11 @@ const SignalementController = {
   // GET /api/signalements/me?statut=
   async listMine(req, res, next) {
     try {
-      const { statut } = req.query;
+      const statut = req.query.statut ? normalizeSignalementStatut(req.query.statut) : undefined;
+      if (req.query.statut && !statut) {
+        return res.status(400).json({ error: `Statut invalide. Valeurs possibles : ${signalementStatusMessage()}.` });
+      }
+
       const signalements = await SignalementModel.findByUser(req.user.id, { statut });
       res.json({ signalements });
     } catch (err) {
@@ -71,7 +77,7 @@ const SignalementController = {
     }
   },
 
-  // GET /api/signalements/public  (carte publique — validés uniquement)
+  // GET /api/signalements/public  (carte publique — signalements visibles uniquement)
   async listPublicForMap(req, res, next) {
     try {
       const { commune } = req.query;
@@ -87,7 +93,12 @@ const SignalementController = {
   // GET /api/signalements?statut=&commune=
   async listAll(req, res, next) {
     try {
-      const { statut, commune } = req.query;
+      const statut = req.query.statut ? normalizeSignalementStatut(req.query.statut) : undefined;
+      if (req.query.statut && !statut) {
+        return res.status(400).json({ error: `Statut invalide. Valeurs possibles : ${signalementStatusMessage()}.` });
+      }
+
+      const { commune } = req.query;
       const signalements = await SignalementModel.findAll({ statut, commune });
       res.json({ signalements });
     } catch (err) {
@@ -98,17 +109,19 @@ const SignalementController = {
   // PATCH /api/signalements/:id/statut
   async updateStatut(req, res, next) {
     try {
-      const { statut, motif_rejet } = req.body;
-      if (!STATUTS_VALIDES.includes(statut)) {
-        return res.status(400).json({ error: `Statut invalide. Valeurs possibles : ${STATUTS_VALIDES.join(', ')}.` });
+      const statut = normalizeSignalementStatut(req.body.statut);
+      const { motif_rejet } = req.body;
+
+      if (!statut) {
+        return res.status(400).json({ error: `Statut invalide. Valeurs possibles : ${signalementStatusMessage()}.` });
       }
-      if (statut === 'rejeté' && !motif_rejet) {
+      if (statut === 'rejete' && !motif_rejet) {
         return res.status(400).json({ error: 'Un motif de rejet est requis pour rejeter un signalement.' });
       }
 
       const signalement = await SignalementModel.updateStatut(req.params.id, {
         statut,
-        motifRejet: motif_rejet,
+        motifRejet: statut === 'rejete' ? motif_rejet : null,
         validatedBy: req.user.id,
       });
       if (!signalement) return res.status(404).json({ error: 'Signalement introuvable.' });

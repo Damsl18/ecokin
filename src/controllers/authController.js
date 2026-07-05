@@ -17,8 +17,23 @@ function cookieOptions() {
   };
 }
 
+function getResetFrontendBaseUrl() {
+  const urls = [
+    process.env.FRONTEND_USER_URL,
+    process.env.FRONTEND_URL,
+    process.env.FRONTEND_URLS && process.env.FRONTEND_URLS.split(',')[0],
+  ].filter(Boolean);
+
+  return (urls[0] || 'http://localhost:5502').trim().replace(/\/$/, '');
+}
+
+function getResetFrontendPath() {
+  const configuredPath = process.env.FRONTEND_RESET_PASSWORD_PATH || '/reset-password.html';
+  return configuredPath.startsWith('/') ? configuredPath : `/${configuredPath}`;
+}
+
 async function sendResetEmail(email, token) {
-  const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+  const resetLink = `${getResetFrontendBaseUrl()}${getResetFrontendPath()}?token=${token}`;
 
   if (!process.env.SMTP_HOST) {
     // Mode dev : pas de SMTP configuré, on logue simplement le lien.

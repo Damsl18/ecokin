@@ -1,5 +1,38 @@
 const PointCollectionModel = require('../models/pointCollectionModel');
 
+function validateCoordinates(latitude, longitude) {
+  const lat = parseFloat(latitude);
+  const lng = parseFloat(longitude);
+  if (Number.isNaN(lat) || Number.isNaN(lng)) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return { lat, lng };
+}
+
+function validatePayload(req, res) {
+  const { nom, adresse, latitude, longitude, type_dechet, horaires, contact } = req.body;
+
+  if (!nom || !adresse || latitude === undefined || longitude === undefined) {
+    res.status(400).json({ error: 'Champs requis : nom, adresse, latitude, longitude.' });
+    return null;
+  }
+
+  const coords = validateCoordinates(latitude, longitude);
+  if (!coords) {
+    res.status(400).json({ error: 'Latitude/longitude invalides.' });
+    return null;
+  }
+
+  return {
+    nom: nom.trim(),
+    adresse: adresse.trim(),
+    latitude: coords.lat,
+    longitude: coords.lng,
+    typeDechet: type_dechet || null,
+    horaires: horaires || null,
+    contact: contact || null,
+  };
+}
+
 const PointCollectionController = {
   // GET /api/points-collection?type_dechet=  (public)
   async listAll(req, res, next) {
@@ -26,16 +59,10 @@ const PointCollectionController = {
   // POST /api/points-collection  (admin)
   async create(req, res, next) {
     try {
-      const { nom, adresse, latitude, longitude, type_dechet, horaires, contact } = req.body;
-      if (!nom || !adresse || latitude === undefined || longitude === undefined) {
-        return res.status(400).json({ error: 'Champs requis : nom, adresse, latitude, longitude.' });
-      }
-      const point = await PointCollectionModel.create({
-        nom, adresse,
-        latitude: parseFloat(latitude),
-        longitude: parseFloat(longitude),
-        typeDechet: type_dechet, horaires, contact,
-      });
+      const payload = validatePayload(req, res);
+      if (!payload) return;
+
+      const point = await PointCollectionModel.create(payload);
       res.status(201).json({ message: 'Point de collecte créé.', point });
     } catch (err) {
       next(err);
@@ -45,13 +72,10 @@ const PointCollectionController = {
   // PUT /api/points-collection/:id  (admin)
   async update(req, res, next) {
     try {
-      const { nom, adresse, latitude, longitude, type_dechet, horaires, contact } = req.body;
-      const point = await PointCollectionModel.update(req.params.id, {
-        nom, adresse,
-        latitude: parseFloat(latitude),
-        longitude: parseFloat(longitude),
-        typeDechet: type_dechet, horaires, contact,
-      });
+      const payload = validatePayload(req, res);
+      if (!payload) return;
+
+      const point = await PointCollectionModel.update(req.params.id, payload);
       if (!point) return res.status(404).json({ error: 'Point de collecte introuvable.' });
       res.json({ message: 'Point de collecte mis à jour.', point });
     } catch (err) {

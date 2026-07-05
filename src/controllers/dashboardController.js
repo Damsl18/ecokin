@@ -10,8 +10,8 @@ const DashboardController = {
       const [mesSignalements, mesArticles, articlesPublies, signalementsTraites] = await Promise.all([
         SignalementModel.findByUser(userId),
         ArticleModel.findByAuteur(userId),
-        ArticleModel.countByStatutForAuteur(userId, 'publié'),
-        SignalementModel.countByStatutForUser(userId, 'validé'),
+        ArticleModel.countByStatutForAuteur(userId, 'publie'),
+        SignalementModel.countByStatutForUser(userId, 'traite'),
       ]);
 
       res.json({
