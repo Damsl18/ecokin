@@ -1,4 +1,5 @@
 const SignalementModel = require('../models/signalementModel');
+const SignalementLectureModel = require('../models/signalementLectureModel');
 const { normalizeSignalementStatut, signalementStatusMessage } = require('../utils/status');
 
 function buildPhotoPath(file) {
@@ -83,6 +84,29 @@ const SignalementController = {
       const { commune } = req.query;
       const signalements = await SignalementModel.findValidatedForMap({ commune });
       res.json({ signalements });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // GET /api/signalements/lues  (auth requis — IDs des signalements déjà lus par l'utilisateur)
+  async listRead(req, res, next) {
+    try {
+      const ids = await SignalementLectureModel.listReadIdsForUser(req.user.id);
+      res.json({ signalement_ids: ids });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // POST /api/signalements/:id/lu  (auth requis — marquage définitif, pas de démarquage)
+  async markAsRead(req, res, next) {
+    try {
+      const signalement = await SignalementModel.findById(req.params.id);
+      if (!signalement) return res.status(404).json({ error: 'Signalement introuvable.' });
+
+      const lecture = await SignalementLectureModel.markAsRead(req.user.id, req.params.id);
+      res.json({ message: 'Signalement marqué comme lu.', lecture });
     } catch (err) {
       next(err);
     }

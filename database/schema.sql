@@ -85,6 +85,17 @@ CREATE TABLE zones_risque (
   date_modification TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- ============ TABLE SIGNALEMENT_LECTURES ============
+-- Marquage "lu" par utilisateur, sur la carte de l'espace utilisateur.
+-- Définitif (pas de démarquage) : une seule ligne par (user, signalement).
+CREATE TABLE signalement_lectures (
+  id SERIAL PRIMARY KEY,
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  signalement_id INT NOT NULL REFERENCES signalements(id) ON DELETE CASCADE,
+  date_lecture TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, signalement_id)
+);
+
 -- ============ TABLE SESSIONS ============
 CREATE TABLE sessions (
   id SERIAL PRIMARY KEY,
@@ -105,3 +116,5 @@ CREATE INDEX idx_zones_risque_commune ON zones_risque(commune);
 CREATE INDEX idx_zones_risque_niveau ON zones_risque(niveau_risque);
 CREATE INDEX idx_sessions_token ON sessions(token);
 CREATE INDEX idx_sessions_user_id ON sessions(user_id);
+CREATE INDEX idx_signalement_lectures_user_id ON signalement_lectures(user_id);
+CREATE INDEX idx_signalement_lectures_signalement_id ON signalement_lectures(signalement_id);

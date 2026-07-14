@@ -9,23 +9,13 @@ const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
 
-function parseOrigins() {
-  const values = [
-    process.env.FRONTEND_URL,
-    process.env.FRONTEND_PUBLIC_URL,
-    process.env.FRONTEND_USER_URL,
-    process.env.FRONTEND_ADMIN_URL,
-    process.env.FRONTEND_URLS,
-  ];
-
-  return values
-    .filter(Boolean)
-    .flatMap((value) => value.split(','))
-    .map((origin) => origin.trim().replace(/\/$/, ''))
-    .filter(Boolean);
-}
-
-const allowedOrigins = parseOrigins();
+const allowedOrigins = [
+  "http://localhost:5500",
+  "http://localhost:5501",
+  "http://localhost:5502",
+  "http://localhost:5503",
+  process.env.FRONTEND_URL
+].filter(Boolean);
 
 app.use(cors({
   origin(origin, callback) {

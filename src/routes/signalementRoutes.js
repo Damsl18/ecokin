@@ -10,6 +10,8 @@ router.get('/public', SignalementController.listPublicForMap);
 // Utilisateur connecté
 router.post('/', requireAuth, uploadSignalementPhoto, SignalementController.create);
 router.get('/me', requireAuth, SignalementController.listMine);
+router.get('/lues', requireAuth, SignalementController.listRead);
+router.post('/:id/lu', requireAuth, SignalementController.markAsRead);
 router.get('/:id', requireAuth, SignalementController.getOne);
 
 // Admin
