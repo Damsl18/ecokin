@@ -110,7 +110,7 @@ const AuthController = {
       const expirationDate = new Date(Date.now() + SESSION_DURATION_DAYS * 24 * 60 * 60 * 1000);
       await SessionModel.create(user.id, token, expirationDate);
 
-      res.cookie(COOKIE_NAME, token, cookieOptions());
+      res.cookie(process.env.SESSION_COOKIE_NAME || COOKIE_NAME, token, cookieOptions());
       res.json({
         message: 'Connexion réussie.',
         user: {
@@ -133,7 +133,7 @@ const AuthController = {
       if (req.sessionToken) {
         await SessionModel.deleteByToken(req.sessionToken);
       }
-      res.clearCookie(COOKIE_NAME);
+      res.clearCookie(process.env.SESSION_COOKIE_NAME || COOKIE_NAME);
       res.json({ message: 'Déconnexion réussie.' });
     } catch (err) {
       next(err);
@@ -189,10 +189,5 @@ const AuthController = {
     }
   },
 };
-res.cookie(process.env.SESSION_COOKIE_NAME, token, {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',   // HTTPS obligatoire en prod
-  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-  maxAge: 1000 * 60 * 60 * 24 * Number(process.env.SESSION_DURATION_DAYS || 7),
-});
+
 module.exports = AuthController;
