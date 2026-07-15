@@ -1,4 +1,4 @@
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
 const UserModel = require('../models/userModel');
 const SessionModel = require('../models/sessionModel');
@@ -189,5 +189,10 @@ const AuthController = {
     }
   },
 };
-
+res.cookie(process.env.SESSION_COOKIE_NAME, token, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',   // HTTPS obligatoire en prod
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  maxAge: 1000 * 60 * 60 * 24 * Number(process.env.SESSION_DURATION_DAYS || 7),
+});
 module.exports = AuthController;
