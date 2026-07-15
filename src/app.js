@@ -10,11 +10,10 @@ const errorHandler = require('./middlewares/errorHandler');
 const app = express();
 
 const allowedOrigins = [
-  "http://localhost:5500",
-  "http://localhost:5501",
-  "http://localhost:5502",
-  "http://localhost:5503",
-  process.env.FRONTEND_URL
+  process.env.FRONTEND_ADMIN_URL,
+  process.env.FRONTEND_USER_URL,
+  process.env.FRONTEND_URL,
+  process.env.FRONTEND_PUBLIC_URL
 ].filter(Boolean);
 
 app.use(cors({
