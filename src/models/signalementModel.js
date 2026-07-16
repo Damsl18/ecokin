@@ -79,7 +79,7 @@ const SignalementModel = {
     const result = await pool.query(
       `UPDATE signalements
        SET statut = $1, motif_rejet = $2, validated_by = $3,
-           date_validation = CASE WHEN $1 = 'en_attente' THEN NULL ELSE NOW() END
+           date_validation = CASE WHEN $1::varchar = 'en_attente' THEN NULL ELSE NOW() END
        WHERE id = $4
        RETURNING *`,
       [statut, motifRejet || null, validatedBy, id]
