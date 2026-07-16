@@ -41,3 +41,37 @@ services:
     #   name: uploads
     #   mountPath: /opt/render/project/src/uploads
     #   sizeGB: 1
+
+
+
+#     # ==== Serveur ====
+# PORT=5000
+# NODE_ENV=development
+
+# # ==== Base de données PostgreSQL ====
+# DB_HOST=localhost
+# DB_PORT=5432
+# DB_NAME=ecokin
+# DB_USER=postgres
+# DB_PASSWORD=dams18
+
+# # ==== Frontend (pour CORS + liens dans les emails) ====
+# FRONTEND_URL=http://localhost:5500
+# FRONTEND_PUBLIC_URL=http://localhost:5501
+# FRONTEND_USER_URL=http://localhost:5502
+# FRONTEND_ADMIN_URL=http://localhost:5503
+
+# # ==== Sessions ====
+# # Durée de vie d'une session en jours
+# SESSION_DURATION_DAYS=7
+# # Nom du cookie de session
+# SESSION_COOKIE_NAME=ecokin_session
+
+# # ==== Email (mot de passe oublié) ====
+# # Si non configuré, le lien de réinitialisation est simplement loggé
+# # en console (mode dev) au lieu d'être envoyé par email.
+# SMTP_HOST=
+# SMTP_PORT=587
+# SMTP_USER=
+# SMTP_PASSWORD=
+# SMTP_FROM=noreply@ecokin.cd
