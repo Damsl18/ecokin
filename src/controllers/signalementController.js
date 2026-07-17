@@ -1,10 +1,7 @@
 const SignalementModel = require('../models/signalementModel');
 const SignalementLectureModel = require('../models/signalementLectureModel');
 const { normalizeSignalementStatut, signalementStatusMessage } = require('../utils/status');
-
-function buildPhotoPath(file) {
-  return file ? `/uploads/signalements/${file.filename}` : null;
-}
+const { uploadImageBuffer } = require('../utils/uploadToCloudinary');
 
 function deriveTitre(description) {
   const clean = description.trim().replace(/\s+/g, ' ');
@@ -32,6 +29,8 @@ const SignalementController = {
         return res.status(400).json({ error: 'Latitude ou longitude hors limites.' });
       }
 
+      const photoPath = await uploadImageBuffer(req.file, 'ecokin/signalements');
+
       const signalement = await SignalementModel.create({
         userId: req.user.id,
         titre: titre && titre.trim() ? titre.trim() : deriveTitre(description),
@@ -39,7 +38,7 @@ const SignalementController = {
         adresse: adresse.trim(),
         latitude: lat,
         longitude: lng,
-        photoPath: buildPhotoPath(req.file),
+        photoPath,
       });
 
       res.status(201).json({ message: 'Signalement envoyé avec succès.', signalement });

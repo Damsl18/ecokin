@@ -1,10 +1,7 @@
 const ArticleModel = require('../models/articleModel');
 const { sanitizeHtml } = require('../utils/sanitizeHtml');
 const { normalizeArticleStatut, articleStatusMessage } = require('../utils/status');
-
-function buildCoverPath(file) {
-  return file ? `/uploads/articles/${file.filename}` : null;
-}
+const { uploadImageBuffer } = require('../utils/uploadToCloudinary');
 
 const ArticleController = {
   // POST /api/articles  (auth requis, image de couverture optionnelle)
@@ -20,12 +17,14 @@ const ArticleController = {
         return res.status(400).json({ error: 'Le contenu de l\'article est vide ou invalide après nettoyage HTML.' });
       }
 
+      const coverImagePath = await uploadImageBuffer(req.file, 'ecokin/articles');
+
       const article = await ArticleModel.create({
         auteurId: req.user.id,
         titre: titre.trim(),
         contenu: contenuSanitize,
         categorie,
-        coverImagePath: buildCoverPath(req.file),
+        coverImagePath,
       });
 
       res.status(201).json({
@@ -87,11 +86,17 @@ const ArticleController = {
         return res.status(400).json({ error: 'Le contenu de l\'article est vide ou invalide après nettoyage HTML.' });
       }
 
+      // Si aucune nouvelle image n'est envoyée, on garde l'image de couverture
+      // existante au lieu de l'effacer (bug corrigé au passage).
+      const coverImagePath = req.file
+        ? await uploadImageBuffer(req.file, 'ecokin/articles')
+        : existing.cover_image_path;
+
       const article = await ArticleModel.update(req.params.id, {
         titre: titre.trim(),
         contenu: contenuSanitize,
         categorie,
-        coverImagePath: buildCoverPath(req.file),
+        coverImagePath,
       });
 
       res.json({ message: 'Article mis à jour.', article });
