@@ -19,7 +19,7 @@ const ArticleController = {
 
       const coverImagePath = await uploadImageBuffer(req.file, 'ecokin/articles');
 
-      const article = await ArticleModel.create({
+      let article = await ArticleModel.create({
         auteurId: req.user.id,
         titre: titre.trim(),
         contenu: contenuSanitize,
@@ -27,8 +27,15 @@ const ArticleController = {
         coverImagePath,
       });
 
+      // Un article créé par un admin est publié directement (pas d'auto-modération).
+      if (req.user.role === 'admin') {
+        article = await ArticleModel.updateStatut(article.id, { statut: 'publie', validatedBy: req.user.id });
+      }
+
       res.status(201).json({
-        message: 'Article soumis pour validation. Il sera vérifié par un administrateur avant publication.',
+        message: req.user.role === 'admin'
+          ? 'Article publié.'
+          : 'Article soumis pour validation. Il sera vérifié par un administrateur avant publication.',
         article,
       });
     } catch (err) {
@@ -69,10 +76,11 @@ const ArticleController = {
     try {
       const existing = await ArticleModel.findById(req.params.id);
       if (!existing) return res.status(404).json({ error: 'Article introuvable.' });
-      if (existing.auteur_id !== req.user.id) {
+      const isAdmin = req.user.role === 'admin';
+      if (!isAdmin && existing.auteur_id !== req.user.id) {
         return res.status(403).json({ error: 'Vous ne pouvez modifier que vos propres articles.' });
       }
-      if (existing.statut !== 'en_attente') {
+      if (!isAdmin && existing.statut !== 'en_attente') {
         return res.status(400).json({ error: 'Seuls les articles en attente peuvent être modifiés.' });
       }
 

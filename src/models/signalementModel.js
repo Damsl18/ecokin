@@ -61,7 +61,7 @@ const SignalementModel = {
     const params = [];
     let query = `
       SELECT s.id, s.titre, s.description, s.adresse, s.latitude, s.longitude,
-             s.photo_path, s.statut, s.date_creation, u.commune AS user_commune
+             s.photo_path, s.date_creation, u.commune AS user_commune
       FROM signalements s
       JOIN users u ON u.id = s.user_id
       WHERE s.statut IN ('valide', 'en_cours', 'traite')
@@ -93,6 +93,14 @@ const SignalementModel = {
 
   async countAll() {
     const result = await pool.query('SELECT COUNT(*)::int AS count FROM signalements');
+    return result.rows[0].count;
+  },
+
+  async countCreatedSince(days) {
+    const result = await pool.query(
+      `SELECT COUNT(*)::int AS count FROM signalements WHERE date_creation >= NOW() - ($1 || ' days')::interval`,
+      [days]
+    );
     return result.rows[0].count;
   },
 

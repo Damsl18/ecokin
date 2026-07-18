@@ -31,12 +31,19 @@ const DashboardController = {
   // GET /api/dashboard/admin
   async adminDashboard(req, res, next) {
     try {
-      const [totalUsers, totalSignalements, totalArticles, signalementsEnAttente, articlesEnAttente] = await Promise.all([
+      const [
+        totalUsers, totalSignalements, totalArticles,
+        signalementsEnAttente, articlesEnAttente,
+        nouveauxUtilisateurs7j, signalements7j, articlesPublies7j,
+      ] = await Promise.all([
         UserModel.countAll(),
         SignalementModel.countAll(),
         ArticleModel.countAll(),
         SignalementModel.findAll({ statut: 'en_attente' }),
         ArticleModel.findAll({ statut: 'en_attente' }),
+        UserModel.countCreatedSince(7),
+        SignalementModel.countCreatedSince(7),
+        ArticleModel.countPublishedSince(7),
       ]);
 
       res.json({
@@ -46,6 +53,9 @@ const DashboardController = {
           total_articles: totalArticles,
           signalements_en_attente: signalementsEnAttente.length,
           articles_en_attente: articlesEnAttente.length,
+          nouveaux_utilisateurs_7j: nouveauxUtilisateurs7j,
+          signalements_7j: signalements7j,
+          articles_publies_7j: articlesPublies7j,
         },
       });
     } catch (err) {

@@ -1,4 +1,4 @@
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const UserModel = require('../models/userModel');
 
 const UserController = {
@@ -71,6 +71,58 @@ const UserController = {
       const user = await UserModel.findById(req.params.id);
       if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
       res.json({ user });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // POST /api/users  (admin uniquement — création d'un compte avec rôle)
+  async createByAdmin(req, res, next) {
+    try {
+      const { nom, prenom, email, commune, password, role } = req.body;
+      if (!nom || !prenom || !email || !commune || !password) {
+        return res.status(400).json({ error: 'Champs requis : nom, prenom, email, commune, password.' });
+      }
+      if (password.length < 6) {
+        return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 6 caractères.' });
+      }
+      if (role && !['user', 'admin'].includes(role)) {
+        return res.status(400).json({ error: "Rôle invalide. Valeurs possibles : user, admin." });
+      }
+
+      const existing = await UserModel.findByEmail(email);
+      if (existing) {
+        return res.status(409).json({ error: 'Un compte existe déjà avec cet email.' });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const user = await UserModel.createByAdmin({
+        email, hashedPassword, nom, prenom, commune, role: role || 'user',
+      });
+      res.status(201).json({ message: 'Utilisateur créé.', user });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // PUT /api/users/:id  (admin uniquement — modification complète, y compris le rôle)
+  async updateByAdmin(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { nom, prenom, email, commune, role } = req.body;
+      if (!nom || !prenom || !email || !commune || !role) {
+        return res.status(400).json({ error: 'Champs requis : nom, prenom, email, commune, role.' });
+      }
+      if (!['user', 'admin'].includes(role)) {
+        return res.status(400).json({ error: "Rôle invalide. Valeurs possibles : user, admin." });
+      }
+      if (parseInt(id, 10) === req.user.id && role !== 'admin') {
+        return res.status(400).json({ error: 'Vous ne pouvez pas retirer votre propre rôle administrateur.' });
+      }
+
+      const user = await UserModel.updateByAdmin(id, { nom, prenom, email, commune, role });
+      if (!user) return res.status(404).json({ error: 'Utilisateur introuvable.' });
+      res.json({ message: 'Utilisateur mis à jour.', user });
     } catch (err) {
       next(err);
     }

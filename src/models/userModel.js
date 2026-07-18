@@ -13,6 +13,29 @@ const UserModel = {
     return result.rows[0];
   },
 
+  // Création par un admin — peut définir le rôle dès la création.
+  async createByAdmin({ email, hashedPassword, nom, prenom, commune, role }) {
+    const result = await pool.query(
+      `INSERT INTO users (email, password, nom, prenom, commune, role)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING ${PUBLIC_FIELDS}`,
+      [email, hashedPassword, nom, prenom, commune, role || 'user']
+    );
+    return result.rows[0];
+  },
+
+  // Modification par un admin — peut changer le rôle d'un autre utilisateur.
+  async updateByAdmin(id, { nom, prenom, email, commune, role }) {
+    const result = await pool.query(
+      `UPDATE users
+       SET nom = $1, prenom = $2, email = $3, commune = $4, role = $5, date_modification = NOW()
+       WHERE id = $6
+       RETURNING ${PUBLIC_FIELDS}`,
+      [nom, prenom, email, commune, role, id]
+    );
+    return result.rows[0];
+  },
+
   async findByEmail(email) {
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     return result.rows[0];
@@ -87,6 +110,14 @@ const UserModel = {
 
   async countAll() {
     const result = await pool.query('SELECT COUNT(*)::int AS count FROM users');
+    return result.rows[0].count;
+  },
+
+  async countCreatedSince(days) {
+    const result = await pool.query(
+      `SELECT COUNT(*)::int AS count FROM users WHERE date_inscription >= NOW() - ($1 || ' days')::interval`,
+      [days]
+    );
     return result.rows[0].count;
   },
 };

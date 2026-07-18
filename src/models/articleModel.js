@@ -111,6 +111,22 @@ const ArticleModel = {
     return result.rows[0].count;
   },
 
+  async countCreatedSince(days) {
+    const result = await pool.query(
+      `SELECT COUNT(*)::int AS count FROM articles WHERE date_creation >= NOW() - ($1 || ' days')::interval`,
+      [days]
+    );
+    return result.rows[0].count;
+  },
+
+  async countPublishedSince(days) {
+    const result = await pool.query(
+      `SELECT COUNT(*)::int AS count FROM articles WHERE statut = 'publie' AND date_publication >= NOW() - ($1 || ' days')::interval`,
+      [days]
+    );
+    return result.rows[0].count;
+  },
+
   async countPublishedTotal() {
     const result = await pool.query(
       `SELECT COUNT(*)::int AS count FROM articles WHERE statut = 'publie'`
